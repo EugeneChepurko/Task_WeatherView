@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Task_WeatherView.Models;
-//using Swashbuckle.AspNetCore.Annotations;
-using System.Net;
 
 namespace Task_WeatherView.Controllers
 {
@@ -34,6 +32,7 @@ namespace Task_WeatherView.Controllers
                 var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
                 return data.ToString();
             }
+            
             return StatusCodes.Status404NotFound.ToString();
         }
         /// <summary>
@@ -46,19 +45,16 @@ namespace Task_WeatherView.Controllers
         /// <response code="500">Server Error!</response>   
         /// <response code="200">Wow It is Ok!</response>   
         [HttpGet]
-        //[ProducesResponseType(400)]
-        //[ProducesResponseType(typeof(int), 400)]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Get(string city)
         {
             if (city != null)
             {
                 var weather = await GetWeather(city);
-                return NotFound(weather.ToString());
+                if(weather.Contains("404"))
+                {
+                    return NotFound(weather.ToString());
+                }
+                return Ok(weather.ToString());  
             }
             return BadRequest();
         }

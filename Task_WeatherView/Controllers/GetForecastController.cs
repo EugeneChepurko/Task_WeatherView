@@ -19,27 +19,47 @@ namespace Task_WeatherView.Controllers
     {
         public static async Task<string> GetWeatherForFiveDays(string city)
         {
-            var code = GetCodeCountry(city);
-            var http = new HttpClient();
-            var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={city},{code}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
-            var result = await response.Content.ReadAsStringAsync();
+            if (city == null)
+                return StatusCodes.Status400BadRequest.ToString();
 
-            var serializer = new DataContractJsonSerializer(typeof(GetForecastCity));
-            var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
-            var data = (GetForecastCity)serializer.ReadObject(memory_stream);
-            return data.ToString();
+            var codeCountry = GetCodeCountry(city);
+            var http = new HttpClient();
+            var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={city},{codeCountry}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
+
+            if (response.IsSuccessStatusCode == true)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+
+                var serializer = new DataContractJsonSerializer(typeof(GetForecastCity));
+                var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
+                var data = (GetForecastCity)serializer.ReadObject(memory_stream);
+                return data.ToString();
+            }
+            return StatusCodes.Status404NotFound.ToString();
         }
         /// <summary>
         /// Get forecast for specific city
         /// </summary>
         /// <param name="city"></param>
-        /// <returns></returns>
+        /// <returns>Forecast for specific city</returns>
+        /// <response code="400">If the city is null</response>
+        /// <response code="404">Not found city</response>
+        /// <response code="500">Server Error!</response>   
+        /// <response code="200">Wow It is Ok!</response> 
         [HttpGet]
         [Route("api/[controller]")]
         public async Task<IActionResult> Get(string city)
         {
-            string weather = await GetWeatherForFiveDays(city);
-            return Ok(weather.ToString());
+            if (city != null)
+            {
+                var weather = await GetWeatherForFiveDays(city);
+                if (weather.Contains("404"))
+                {
+                    return NotFound(weather.ToString());
+                }
+                return Ok(weather.ToString());
+            }
+            return BadRequest();
         }
 
         private static async Task<string> GetCodeCountry(string city)
