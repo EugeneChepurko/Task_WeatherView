@@ -29,10 +29,14 @@ namespace Task_WeatherView.Controllers
             var data = (GetForecastCity)serializer.ReadObject(memory_stream);
             return data.ToString();
         }
-
+        /// <summary>
+        /// Get forecast for specific city
+        /// </summary>
+        /// <param name="city"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("api/[controller]")]
-        public async Task<IActionResult> Click(string city)
+        public async Task<IActionResult> Get(string city)
         {
             string weather = await GetWeatherForFiveDays(city);
             return Ok(weather.ToString());

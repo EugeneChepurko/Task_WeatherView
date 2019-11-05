@@ -64,7 +64,7 @@ namespace Task_WeatherView.Models
 
         public override string ToString()
         {
-            return $"Date: {DateTime.Now.ToString("s")} \nCurrent temp: {main.temp} °C \nWind: {wind.speed} km/h \nClouds: {weather[0].description}";
+            return $"Date: {DateTime.Now.ToString("s")} \nCurrent temp: {main?.temp} °C \nWind: {wind?.speed} km/h \nClouds: {weather?[0]?.description}";
         }
     }
 }
