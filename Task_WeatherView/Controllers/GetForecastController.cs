@@ -17,18 +17,9 @@ namespace Task_WeatherView.Controllers
     [ApiController]
     public class GetForecastController : ControllerBase
     {
-        public static async Task<string> GetWeatherForFiveDays(string city/*, string code*/)
+        public static async Task<string> GetWeatherForFiveDays(string city)
         {
-            var http1 = new HttpClient();
-            var response1 = await http1.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
-            var result1 = await response1.Content.ReadAsStringAsync();
-
-            var serializer1 = new DataContractJsonSerializer(typeof(GetCurrentCity));
-            var memory_stream1 = new MemoryStream(Encoding.UTF8.GetBytes(result1));
-            var data1 = (GetCurrentCity)serializer1.ReadObject(memory_stream1);
-
-            //-------------------------------------------------------
-            var code = data1.sys.country;
+            var code = GetCodeCountry(city);
             var http = new HttpClient();
             var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={city},{code}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
             var result = await response.Content.ReadAsStringAsync();
@@ -41,10 +32,23 @@ namespace Task_WeatherView.Controllers
 
         [HttpGet]
         [Route("api/[controller]")]
-        public async Task<IActionResult> Click(string city/*, string code*/)
+        public async Task<IActionResult> Click(string city)
         {
-            string weather = await GetWeatherForFiveDays(city/*, code*/);
+            string weather = await GetWeatherForFiveDays(city);
             return Ok(weather.ToString());
+        }
+
+        private static async Task<string> GetCodeCountry(string city)
+        {
+            var http = new HttpClient();
+            var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
+            var result = await response.Content.ReadAsStringAsync();
+
+            var serializer = new DataContractJsonSerializer(typeof(GetCurrentCity));
+            var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
+            var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
+
+            return data.sys.country;
         }
     }
 }
