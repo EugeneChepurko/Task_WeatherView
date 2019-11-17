@@ -16,23 +16,26 @@ namespace Task_WeatherView.Controllers
     [ApiController]
     public class GetCurrentWeatherController : ControllerBase
     {
-        public static async Task<string> GetWeather(string city)
+        private static object locker = new object();
+        public static string GetWeather(string city)
         {
-            if(city == null)
-                return StatusCodes.Status400BadRequest.ToString();
-
-            var http = new HttpClient();
-            var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
-            if (response.IsSuccessStatusCode == true)
+            lock(locker)
             {
-                var result = await response.Content.ReadAsStringAsync();
+                if (city == null)
+                    return StatusCodes.Status400BadRequest.ToString();
 
-                var serializer = new DataContractJsonSerializer(typeof(GetCurrentCity));
-                var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
-                var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
-                return data.ToString();
+                var http = new HttpClient();
+                var response = http.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
+                if (response.Result.IsSuccessStatusCode == true)
+                {
+                    var result = response.Result.Content.ReadAsStringAsync();
+
+                    var serializer = new DataContractJsonSerializer(typeof(GetCurrentCity));
+                    var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result.Result.ToCharArray()));
+                    var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
+                    return data.ToString();
+                }
             }
-            
             return StatusCodes.Status404NotFound.ToString();
         }
         /// <summary>
@@ -45,16 +48,18 @@ namespace Task_WeatherView.Controllers
         /// <response code="500">Server Error!</response>   
         /// <response code="200">Wow It is Ok!</response>   
         [HttpGet]
-        public async Task<IActionResult> Get(string city)
+        public IActionResult Get(string city)
         {
             if (city != null)
             {
-                var weather = await GetWeather(city);
-                if(weather.Contains("404"))
+                Task<string> task = Task.Run(() => GetWeather(city));
+            
+                //var weather = GetWeather(city);
+                if (task.Result.Contains("404"))
                 {
-                    return NotFound(weather.ToString());
+                    return NotFound(task.Result.ToString());
                 }
-                return Ok(weather.ToString());  
+                return Ok(task.Result.ToString());
             }
             return BadRequest();
         }

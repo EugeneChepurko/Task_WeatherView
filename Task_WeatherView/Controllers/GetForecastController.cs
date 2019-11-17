@@ -17,26 +17,30 @@ namespace Task_WeatherView.Controllers
     [ApiController]
     public class GetForecastController : ControllerBase
     {
+        private static object locker = new object();
         public static async Task<string> GetWeatherForFiveDays(string city)
         {
             if (city == null)
                 return StatusCodes.Status400BadRequest.ToString();
 
-            var codeCountry = GetCodeCountry(city);
+            var codeCountry = await Task.Run(() => GetCodeCountry(city));
             var http = new HttpClient();
             var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={city},{codeCountry}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
-
-            if (response.IsSuccessStatusCode == true)
+            lock (locker)
             {
-                var result = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode == true)
+                {
+                    var result = response.Content.ReadAsStringAsync();
 
-                var serializer = new DataContractJsonSerializer(typeof(GetForecastCity));
-                var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
-                var data = (GetForecastCity)serializer.ReadObject(memory_stream);
-                return data.ToString();
+                    var serializer = new DataContractJsonSerializer(typeof(GetForecastCity));
+                    var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result.Result.ToCharArray()));
+                    var data = (GetForecastCity)serializer.ReadObject(memory_stream);
+                    return data.ToString();
+                }
+                return StatusCodes.Status404NotFound.ToString();
             }
-            return StatusCodes.Status404NotFound.ToString();
         }
+            
         /// <summary>
         /// Get forecast for specific city
         /// </summary>
@@ -52,7 +56,8 @@ namespace Task_WeatherView.Controllers
         {
             if (city != null)
             {
-                var weather = await GetWeatherForFiveDays(city);
+                var weather = await Task.Run(() => GetWeatherForFiveDays(city));
+                //var weather = await GetWeatherForFiveDays(city);
                 if (weather.Contains("404"))
                 {
                     return NotFound(weather.ToString());
@@ -62,17 +67,20 @@ namespace Task_WeatherView.Controllers
             return BadRequest();
         }
 
-        private static async Task<string> GetCodeCountry(string city)
+        private static string GetCodeCountry(string city)
         {
-            var http = new HttpClient();
-            var response = await http.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
-            var result = await response.Content.ReadAsStringAsync();
+            lock (locker)
+            {
+                var http = new HttpClient();
+                var response = http.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid=b3c828810d3a5a76bc521cf9479b61a4&units=metric");
+                var result = response.Result.Content.ReadAsStringAsync();
 
-            var serializer = new DataContractJsonSerializer(typeof(GetCurrentCity));
-            var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result));
-            var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
+                var serializer = new DataContractJsonSerializer(typeof(GetCurrentCity));
+                var memory_stream = new MemoryStream(Encoding.UTF8.GetBytes(result.Result.ToCharArray()));
+                var data = (GetCurrentCity)serializer.ReadObject(memory_stream);
 
-            return data.sys.country;
+                return data.sys.country;
+            } 
         }
     }
 }
